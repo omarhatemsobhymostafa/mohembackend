@@ -17,15 +17,31 @@ const ADMIN_CLERK_IDS = new Set(
 );
 const PORT = process.env.PORT;
 
-mongoose.connect(process.env.MONGO_URI).then(() => {
-  console.log("DB CONNECTED SUCCESSFULLY");
-}).catch((err) => {
-  console.log("exit with errors", err);
-})
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+let dbPromise;
+
+async function connectDB() {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is missing");
+  }
+
+  if (!dbPromise) {
+    dbPromise = mongoose
+      .connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 10000,
+      })
+      .catch((error) => {
+        dbPromise = null;
+        throw error;
+      });
+  }
+
+  return dbPromise;
+}
 
 
 app.get("/weeksdata", async (req, res) => {
