@@ -29,26 +29,50 @@ app.listen(PORT, () => {
 
 
 app.get("/weeksdata", async (req, res) => {
-  const WeeksData = await WeeksModel.find()
+  try {
+    const weeksData = await WeeksModel.find().lean();
 
-  const normalizedWeeks = WeeksData
-    .map((item) => {
-      const weekNumber = String(item.weekNumber || "")
-      const numericWeek = Number(weekNumber.replace(/^week_/, ""))
+    const normalizedWeeks = weeksData
+      .map((item) => {
+        const weekNumber = String(item.weekNumber || "");
+        const numericWeek = Number(
+          weekNumber.replace(/^week_/, "")
+        );
 
-      return {
-        ...item.toObject(),
-        numericWeek: Number.isNaN(numericWeek) ? null : numericWeek,
-      }
-    })
-    .filter((item) => item.numericWeek !== null)
-    .filter((item) => item.numericWeek >= 1 && item.numericWeek <= 41)
-    .sort((a, b) => a.numericWeek - b.numericWeek)
-    .filter((item, index, array) => array.findIndex((entry) => entry.numericWeek === item.numericWeek) === index)
-    .map(({ numericWeek, ...rest }) => rest)
+        return {
+          ...item,
+          numericWeek: Number.isNaN(numericWeek)
+            ? null
+            : numericWeek,
+        };
+      })
+      .filter((item) => item.numericWeek !== null)
+      .filter(
+        (item) =>
+          item.numericWeek >= 1 &&
+          item.numericWeek <= 41
+      )
+      .sort((a, b) => a.numericWeek - b.numericWeek)
+      .filter(
+        (item, index, array) =>
+          array.findIndex(
+            (entry) =>
+              entry.numericWeek === item.numericWeek
+          ) === index
+      )
+      .map(({ numericWeek, ...rest }) => rest);
 
-  res.json(normalizedWeeks)
-})
+    res.status(200).json(normalizedWeeks);
+  } catch (error) {
+    console.error("GET /weeksdata failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch weeks data",
+    });
+  }
+});
+
 app.get('/weeksdata/:weekNo', async (req, res) => {
   try {
     const week = await WeeksModel.findOne({
